@@ -44,9 +44,10 @@ class PhoneValidator {
     final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
     if (cleanNumber.isEmpty) return [];
 
-    final matches = countries.where((country) {
-      return country.matchesPattern(cleanNumber);
-    }).toList();
+    final matches =
+        countries.where((country) {
+          return country.matchesPattern(cleanNumber);
+        }).toList();
 
     // Sort by priority descending
     matches.sort((a, b) => b.priority.compareTo(a.priority));
