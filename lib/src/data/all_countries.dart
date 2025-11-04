@@ -8,7 +8,7 @@ import '../models/country_data.dart';
 /// - Flag emoji
 /// - Regex pattern for the dial code
 /// - Local phone number validation patterns
-const List<CountryData> countries = [
+final List<CountryData> countries = [
   CountryData(
     name: 'Afghanistan',
     code: 'AF',

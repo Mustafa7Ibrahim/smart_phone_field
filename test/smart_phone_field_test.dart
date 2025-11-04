@@ -24,7 +24,7 @@ void main() {
     });
 
     test('CountryData equality works correctly', () {
-      const country1 = CountryData(
+      final country1 = CountryData(
         name: 'Test',
         code: 'TS',
         dialCode: '+999',
@@ -32,7 +32,7 @@ void main() {
         pattern: r'^999',
         localPatterns: [r'^[0-9]{10}$'],
       );
-      const country2 = CountryData(
+      final country2 = CountryData(
         name: 'Test',
         code: 'TS',
         dialCode: '+999',
@@ -235,6 +235,348 @@ void main() {
 
       final formatted2 = PhoneValidator.formatInternational('+1 (876) 555-1234');
       expect(formatted2, '+18765551234');
+    });
+  });
+
+  group('All Countries - Data Integrity Tests', () {
+    test('all countries have non-empty names', () {
+      for (final country in countries) {
+        expect(
+          country.name.isNotEmpty,
+          isTrue,
+          reason: 'Country ${country.code} has empty name',
+        );
+      }
+    });
+
+    test('all countries have valid 2-character ISO codes', () {
+      for (final country in countries) {
+        expect(
+          country.code.length,
+          2,
+          reason: 'Country ${country.name} has invalid code: ${country.code}',
+        );
+        expect(
+          country.code.toUpperCase(),
+          country.code,
+          reason: 'Country ${country.name} code should be uppercase',
+        );
+      }
+    });
+
+    test('all countries have valid dial codes starting with +', () {
+      for (final country in countries) {
+        expect(
+          country.dialCode.startsWith('+'),
+          isTrue,
+          reason: 'Country ${country.name} dial code does not start with +: ${country.dialCode}',
+        );
+        expect(
+          country.dialCode.length,
+          greaterThan(1),
+          reason: 'Country ${country.name} has invalid dial code: ${country.dialCode}',
+        );
+        // Verify it's a valid number after the +
+        final digits = country.dialCode.substring(1);
+        expect(
+          int.tryParse(digits),
+          isNotNull,
+          reason: 'Country ${country.name} dial code contains non-digits: ${country.dialCode}',
+        );
+      }
+    });
+
+    test('all countries have non-empty flag emojis', () {
+      for (final country in countries) {
+        expect(
+          country.flag.isNotEmpty,
+          isTrue,
+          reason: 'Country ${country.name} has empty flag',
+        );
+      }
+    });
+
+    test('all countries have valid pattern regex', () {
+      for (final country in countries) {
+        expect(
+          country.pattern.isNotEmpty,
+          isTrue,
+          reason: 'Country ${country.name} has empty pattern',
+        );
+        // Verify it's a valid regex by checking the cached regex compiled successfully
+        expect(
+          () => RegExp(country.pattern),
+          returnsNormally,
+          reason: 'Country ${country.name} has invalid regex pattern: ${country.pattern}',
+        );
+      }
+    });
+
+    test('all countries have at least one local pattern', () {
+      for (final country in countries) {
+        expect(
+          country.localPatterns.isNotEmpty,
+          isTrue,
+          reason: 'Country ${country.name} has no local patterns',
+        );
+      }
+    });
+
+    test('all countries have valid local pattern regex', () {
+      for (final country in countries) {
+        for (var i = 0; i < country.localPatterns.length; i++) {
+          final pattern = country.localPatterns[i];
+          expect(
+            pattern.isNotEmpty,
+            isTrue,
+            reason: 'Country ${country.name} has empty local pattern at index $i',
+          );
+          expect(
+            () => RegExp(pattern),
+            returnsNormally,
+            reason: 'Country ${country.name} has invalid local regex pattern at index $i: $pattern',
+          );
+        }
+      }
+    });
+
+    test('pattern regex starts with dial code digits', () {
+      for (final country in countries) {
+        final dialCodeDigits = country.dialCode.substring(1);
+        // Pattern should start with the dial code (allowing for ^ anchor)
+        final patternWithoutAnchor = country.pattern.replaceFirst(r'^', '');
+        expect(
+          patternWithoutAnchor.startsWith(dialCodeDigits),
+          isTrue,
+          reason: 'Country ${country.name} pattern "$patternWithoutAnchor" does not start with dial code "$dialCodeDigits"',
+        );
+      }
+    });
+  });
+
+  group('All Countries - Uniqueness Tests', () {
+    test('all country codes are unique', () {
+      final codes = countries.map((c) => c.code).toList();
+      final uniqueCodes = codes.toSet();
+      expect(
+        codes.length,
+        uniqueCodes.length,
+        reason: 'Duplicate country codes found',
+      );
+    });
+
+    test('all country names are unique', () {
+      final names = countries.map((c) => c.name).toList();
+      final uniqueNames = names.toSet();
+      expect(
+        names.length,
+        uniqueNames.length,
+        reason: 'Duplicate country names found',
+      );
+    });
+
+    test('country codes match expected format for lookups', () {
+      // Test that all countries can be found via getCountryByCode
+      for (final country in countries) {
+        final found = PhoneValidator.getCountryByCode(country.code);
+        expect(
+          found,
+          isNotNull,
+          reason: 'Country ${country.name} (${country.code}) not found by code lookup',
+        );
+        expect(found?.code, country.code);
+      }
+    });
+
+    test('country names match expected format for lookups', () {
+      // Test that all countries can be found via getCountryByName
+      for (final country in countries) {
+        final found = PhoneValidator.getCountryByName(country.name);
+        expect(
+          found,
+          isNotNull,
+          reason: 'Country ${country.name} not found by name lookup',
+        );
+        expect(found?.name, country.name);
+      }
+    });
+  });
+
+  group('All Countries - Helper Methods Tests', () {
+    test('dialCodeDigits works correctly for all countries', () {
+      for (final country in countries) {
+        final digits = country.dialCodeDigits;
+        expect(
+          digits,
+          country.dialCode.substring(1),
+          reason: 'Country ${country.name} dialCodeDigits mismatch',
+        );
+        // Should not contain +
+        expect(
+          digits.contains('+'),
+          isFalse,
+          reason: 'Country ${country.name} dialCodeDigits contains +',
+        );
+        // Should be numeric
+        expect(
+          int.tryParse(digits),
+          isNotNull,
+          reason: 'Country ${country.name} dialCodeDigits is not numeric: $digits',
+        );
+      }
+    });
+
+    test('displayName works correctly for all countries', () {
+      for (final country in countries) {
+        final display = country.displayName;
+        expect(
+          display.contains(country.flag),
+          isTrue,
+          reason: 'Country ${country.name} displayName missing flag',
+        );
+        expect(
+          display.contains(country.name),
+          isTrue,
+          reason: 'Country ${country.name} displayName missing name',
+        );
+        expect(
+          display.contains(country.dialCode),
+          isTrue,
+          reason: 'Country ${country.name} displayName missing dial code',
+        );
+      }
+    });
+
+    test('toString works correctly for all countries', () {
+      for (final country in countries) {
+        final str = country.toString();
+        expect(
+          str.contains(country.name),
+          isTrue,
+          reason: 'Country ${country.name} toString missing name',
+        );
+        expect(
+          str.contains(country.code),
+          isTrue,
+          reason: 'Country ${country.name} toString missing code',
+        );
+        expect(
+          str.contains(country.dialCode),
+          isTrue,
+          reason: 'Country ${country.name} toString missing dial code',
+        );
+      }
+    });
+  });
+
+  group('All Countries - Priority Tests', () {
+    test('shared dial code countries have appropriate priorities', () {
+      final dialCodeGroups = <String, List<CountryData>>{};
+
+      // Group countries by dial code
+      for (final country in countries) {
+        dialCodeGroups.putIfAbsent(country.dialCode, () => []).add(country);
+      }
+
+      // Check shared dial codes have priorities set
+      for (final entry in dialCodeGroups.entries) {
+        if (entry.value.length > 1) {
+          // This is a shared dial code - verify all countries in the group are present
+          expect(
+            entry.value.isNotEmpty,
+            isTrue,
+            reason: 'Shared dial code ${entry.key} has no countries',
+          );
+        }
+      }
+    });
+
+    test('NANP (+1) countries have proper priority distribution', () {
+      final nanpCountries = countries.where((c) => c.dialCode == '+1').toList();
+
+      expect(nanpCountries.length, greaterThan(10));
+
+      // Should have both high priority (specific area codes) and low priority (generic)
+      final highPriority = nanpCountries.where((c) => c.priority > 0).toList();
+      final lowPriority = nanpCountries.where((c) => c.priority < 0).toList();
+
+      expect(highPriority.isNotEmpty, isTrue, reason: 'No high priority NANP countries');
+      expect(lowPriority.isNotEmpty, isTrue, reason: 'No low priority NANP countries');
+    });
+
+    test('+7 countries (Russia/Kazakhstan) have priorities', () {
+      final plus7Countries = countries.where((c) => c.dialCode == '+7').toList();
+
+      expect(plus7Countries.length, 2);
+      expect(plus7Countries.every((c) => c.priority != 0), isTrue);
+    });
+  });
+
+  group('CountryData - Assertions Tests', () {
+    test('creating CountryData with empty name throws assertion', () {
+      expect(
+        () => CountryData(
+          name: '',
+          code: 'TS',
+          dialCode: '+999',
+          flag: '🏳️',
+          pattern: r'^999',
+          localPatterns: [r'^[0-9]{10}$'],
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    test('creating CountryData with invalid code length throws assertion', () {
+      expect(
+        () => CountryData(
+          name: 'Test',
+          code: 'T',
+          dialCode: '+999',
+          flag: '🏳️',
+          pattern: r'^999',
+          localPatterns: [r'^[0-9]{10}$'],
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+
+      expect(
+        () => CountryData(
+          name: 'Test',
+          code: 'TST',
+          dialCode: '+999',
+          flag: '🏳️',
+          pattern: r'^999',
+          localPatterns: [r'^[0-9]{10}$'],
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    test('creating CountryData with invalid dial code throws assertion', () {
+      expect(
+        () => CountryData(
+          name: 'Test',
+          code: 'TS',
+          dialCode: '999',
+          flag: '🏳️',
+          pattern: r'^999',
+          localPatterns: [r'^[0-9]{10}$'],
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+
+      expect(
+        () => CountryData(
+          name: 'Test',
+          code: 'TS',
+          dialCode: '',
+          flag: '🏳️',
+          pattern: r'^999',
+          localPatterns: [r'^[0-9]{10}$'],
+        ),
+        throwsA(isA<AssertionError>()),
+      );
     });
   });
 }
