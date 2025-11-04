@@ -3,6 +3,15 @@ import '../models/country_data.dart';
 
 /// Utilities for validating and detecting phone numbers
 class PhoneValidator {
+  // For faster lookups, we use maps to store countries by code and name.
+  static final Map<String, CountryData> _countriesByCode = {
+    for (var country in countries) country.code.toLowerCase(): country
+  };
+
+  static final Map<String, CountryData> _countriesByName = {
+    for (var country in countries) country.name.toLowerCase(): country
+  };
+
   /// Detects the country from a phone number by matching patterns.
   /// Returns the matching country or null if no match found.
   ///
@@ -102,24 +111,12 @@ class PhoneValidator {
 
   /// Gets a country by its ISO code.
   static CountryData? getCountryByCode(String isoCode) {
-    try {
-      return countries.firstWhere(
-        (c) => c.code.toLowerCase() == isoCode.toLowerCase(),
-      );
-    } catch (_) {
-      return null;
-    }
+    return _countriesByCode[isoCode.toLowerCase()];
   }
 
   /// Gets a country by its name (case-insensitive).
   static CountryData? getCountryByName(String name) {
-    try {
-      return countries.firstWhere(
-        (c) => c.name.toLowerCase() == name.toLowerCase(),
-      );
-    } catch (_) {
-      return null;
-    }
+    return _countriesByName[name.toLowerCase()];
   }
 
   /// Gets all countries with a specific dial code.
