@@ -99,8 +99,29 @@ class PhoneFieldController extends ChangeNotifier {
       return text;
     }
 
-    // Otherwise, prepend the dial code
-    return '${_selectedCountry!.dialCode}$text';
+    // Clean the number (remove spaces, dashes, parentheses)
+    final cleanText = text.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+
+    // Check if it starts with the dial code without +
+    final dialCodeDigits = _selectedCountry!.dialCode.substring(1);
+    if (cleanText.startsWith(dialCodeDigits)) {
+      return '+$cleanText';
+    }
+
+    // Handle local format: remove leading 0 if present
+    // Many countries use leading 0 for local numbers (Egypt, UK, Germany, etc.)
+    String localNumber = cleanText;
+    if (cleanText.startsWith('0')) {
+      // Try without the leading 0 first
+      final withoutZero = cleanText.substring(1);
+      // Verify that the number without leading 0 is valid for this country
+      if (_selectedCountry!.validateLocal(withoutZero)) {
+        localNumber = withoutZero;
+      }
+    }
+
+    // Prepend the dial code
+    return '${_selectedCountry!.dialCode}$localNumber';
   }
 
   /// Manually sets the selected country.

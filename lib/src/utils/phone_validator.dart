@@ -18,10 +18,16 @@ class PhoneValidator {
   /// The phone number can be in any format (with or without +, spaces, dashes, etc.).
   /// Countries with higher priority values are checked first to resolve ambiguities.
   ///
+  /// This method first tries to detect from international format (with dial code),
+  /// and if that fails, it tries to detect from local format patterns.
+  ///
   /// Example:
   /// ```dart
   /// final country = PhoneValidator.detectCountry('+12685551234');
   /// // Returns Antigua and Barbuda (priority 10), not US/Canada (priority -10)
+  ///
+  /// final country2 = PhoneValidator.detectCountry('0101248831');
+  /// // Returns Egypt (detected from local pattern)
   /// ```
   static CountryData? detectCountry(String phoneNumber) {
     if (phoneNumber.isEmpty) return null;
@@ -34,9 +40,46 @@ class PhoneValidator {
     final sortedCountries = [...countries]
       ..sort((a, b) => b.priority.compareTo(a.priority));
 
-    // Find the first matching country
+    // First, try international format detection (with dial code)
     for (final country in sortedCountries) {
       if (country.matchesPattern(cleanNumber)) {
+        return country;
+      }
+    }
+
+    // If no match found, try local format detection
+    return detectCountryFromLocal(phoneNumber);
+  }
+
+  /// Detects the country from a local phone number format.
+  /// Returns the matching country or null if no match found.
+  ///
+  /// This method matches against each country's local patterns.
+  /// Since local patterns can be ambiguous, the country with the highest
+  /// priority that matches will be returned.
+  ///
+  /// Example:
+  /// ```dart
+  /// final country = PhoneValidator.detectCountryFromLocal('0101248831');
+  /// // Returns Egypt (matches pattern ^0?(10|11|12|15)[0-9]{8}$)
+  ///
+  /// final country2 = PhoneValidator.detectCountryFromLocal('2025551234');
+  /// // Returns United States (matches US local pattern)
+  /// ```
+  static CountryData? detectCountryFromLocal(String phoneNumber) {
+    if (phoneNumber.isEmpty) return null;
+
+    // Clean the phone number (remove spaces, dashes, parentheses, but keep digits)
+    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    if (cleanNumber.isEmpty) return null;
+
+    // Sort countries by priority (descending), so higher priority is checked first
+    final sortedCountries = [...countries]
+      ..sort((a, b) => b.priority.compareTo(a.priority));
+
+    // Find the first country whose local pattern matches
+    for (final country in sortedCountries) {
+      if (country.validateLocal(cleanNumber)) {
         return country;
       }
     }

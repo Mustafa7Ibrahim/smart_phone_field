@@ -5,6 +5,8 @@ A fully customizable Flutter phone number text field with automatic country dete
 ## Features
 
 - **Auto-Detection**: Automatically detects the country as the user types the phone number
+- **Local Format Support**: Detects country from local phone formats (e.g., `01012345678` for Egypt)
+- **International Format Support**: Detects country from international formats (e.g., `+201012345678`)
 - **Country Selection**: Beautiful bottom sheet for manual country selection
 - **Full Validation**: Validates phone numbers based on country-specific patterns
 - **Fully Customizable**: Uses delegate pattern for complete control over appearance and behavior
@@ -253,12 +255,31 @@ CountryData? us = PhoneValidator.getCountryByCode('US');
 // Get country by name
 CountryData? egypt = PhoneValidator.getCountryByName('Egypt');
 
-// Detect country from number
+// Detect country from international format
 CountryData? detected = PhoneValidator.detectCountry('+201234567890');
+
+// Detect country from local format (with leading 0)
+CountryData? local = PhoneValidator.detectCountry('01012345678'); // Egypt
+
+// Detect country specifically from local format
+CountryData? localOnly = PhoneValidator.detectCountryFromLocal('01012345678');
 
 // Validate international number
 bool valid = PhoneValidator.validateInternational('+201234567890');
 ```
+
+### Local vs International Format Detection
+
+The `detectCountry()` method now supports both formats:
+
+- **International format**: Numbers with country code (e.g., `+201012345678`, `+447911123456`)
+- **Local format**: Numbers with leading 0 (e.g., `01012345678` for Egypt, `07911123456` for UK)
+
+**Important Notes:**
+- Numbers **with leading 0** are clearly local format and will be detected accurately
+- Numbers **without leading 0** may be ambiguous (e.g., `1512345678` could be Egypt or USA)
+- For best results with local format, include the leading 0
+- International format is always checked first for disambiguation
 
 ## Example
 

@@ -140,6 +140,42 @@ void main() {
       expect(russia?.code, 'RU');
       expect(kazakhstan?.code, 'KZ');
     });
+
+    test('detectCountry detects Egypt from local format with leading 0', () {
+      // Egyptian mobile numbers are 11 digits with leading 0, or 10 without
+      final country = PhoneValidator.detectCountry('01012345678');
+      expect(country?.code, 'EG');
+      expect(country?.dialCode, '+20');
+    });
+
+    test('detectCountry handles local format with ambiguous patterns', () {
+      // Numbers without leading 0 can be ambiguous with international format
+      // For example, 1512345678 could be Egypt (15-12345678) or NANP (+1-512-345-6789)
+      // The detector prioritizes international format interpretation
+      final country = PhoneValidator.detectCountry('1512345678');
+      // This matches NANP (+1) because international format is checked first
+      expect(['US', 'CA'].contains(country?.code), isTrue);
+
+      // However, with leading 0, it's clearly a local format
+      final egyptWithZero = PhoneValidator.detectCountry('01512345678');
+      expect(egyptWithZero?.code, 'EG');
+    });
+
+    test('detectCountryFromLocal works for various local formats', () {
+      // Egypt mobile numbers (11 digits with 0, or 10 without)
+      expect(PhoneValidator.detectCountryFromLocal('01012345678')?.code, 'EG');
+      expect(PhoneValidator.detectCountryFromLocal('01123456789')?.code, 'EG');
+      expect(PhoneValidator.detectCountryFromLocal('01212345678')?.code, 'EG');
+      expect(PhoneValidator.detectCountryFromLocal('01512345678')?.code, 'EG');
+      expect(PhoneValidator.detectCountryFromLocal('1512345678')?.code, 'EG');
+
+      // Returns null for invalid local numbers
+      expect(PhoneValidator.detectCountryFromLocal('123'), isNull);
+      expect(PhoneValidator.detectCountryFromLocal(''), isNull);
+
+      // Note: Due to the ambiguous nature of local phone patterns, some numbers
+      // may match multiple countries. The country with highest priority is returned.
+    });
   });
 
   group('PhoneValidator - Multiple Matches', () {

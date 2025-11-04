@@ -422,6 +422,8 @@ final List<CountryData> countries = [
     flag: '🇪🇬',
     pattern: r'^20',
     localPatterns: [r'^0?(10|11|12|15)[0-9]{8}$', r'^0?[0-9]{9,10}$'],
+    priority:
+        5, // Higher priority for specific mobile patterns (010, 011, 012, 015)
   ),
   CountryData(
     name: 'El Salvador',
