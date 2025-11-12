@@ -1,7 +1,10 @@
+import 'package:phone_numbers_parser/phone_numbers_parser.dart';
+
 import '../data/all_countries.dart';
 import '../models/country_data.dart';
 
 /// Utilities for validating and detecting phone numbers
+/// Now powered by Google's libphonenumber via phone_numbers_parser
 class PhoneValidator {
   // For faster lookups, we use maps to store countries by code and name.
   static final Map<String, CountryData> _countriesByCode = {
@@ -12,24 +15,42 @@ class PhoneValidator {
     for (var country in countries) country.name.toLowerCase(): country
   };
 
-  /// Detects the country from a phone number by matching patterns.
+  /// Detects the country from a phone number using Google's libphonenumber.
   /// Returns the matching country or null if no match found.
   ///
   /// The phone number can be in any format (with or without +, spaces, dashes, etc.).
-  /// Countries with higher priority values are checked first to resolve ambiguities.
-  ///
-  /// This method first tries to detect from international format (with dial code),
-  /// and if that fails, it tries to detect from local format patterns.
+  /// This method uses libphonenumber for accurate country detection and falls back
+  /// to custom pattern matching if parsing fails.
   ///
   /// Example:
   /// ```dart
-  /// final country = PhoneValidator.detectCountry('+12685551234');
-  /// // Returns Antigua and Barbuda (priority 10), not US/Canada (priority -10)
+  /// final country = PhoneValidator.detectCountry('+12025551234');
+  /// // Returns United States
   ///
   /// final country2 = PhoneValidator.detectCountry('0101248831');
   /// // Returns Egypt (detected from local pattern)
   /// ```
   static CountryData? detectCountry(String phoneNumber) {
+    if (phoneNumber.isEmpty) return null;
+
+    try {
+      // Try to parse with libphonenumber
+      final parsedNumber = PhoneNumber.parse(phoneNumber);
+
+      // Get the ISO code from the parsed number
+      final isoCodeStr = parsedNumber.isoCode.name;
+
+      // Find the matching country in our list
+      return getCountryByCode(isoCodeStr);
+    } catch (e) {
+      // If parsing fails, fall back to custom pattern matching
+      return _detectCountryWithCustomPatterns(phoneNumber);
+    }
+  }
+
+  /// Detects country using custom pattern matching (fallback method).
+  /// This is used when libphonenumber parsing fails.
+  static CountryData? _detectCountryWithCustomPatterns(String phoneNumber) {
     if (phoneNumber.isEmpty) return null;
 
     // Clean the phone number (remove all non-digit characters)
@@ -110,33 +131,106 @@ class PhoneValidator {
   /// Validates a complete phone number (international format).
   /// Returns true if the number matches a country's international pattern
   /// and its local validation pattern.
+  ///
+  /// Uses Google's libphonenumber for robust validation.
   static bool validateInternational(String phoneNumber) {
-    final country = detectCountry(phoneNumber);
-    if (country == null) return false;
+    if (phoneNumber.isEmpty) return false;
 
-    // Extract the local part after the dial code
-    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
-    final dialCodeDigits = country.dialCode.replaceAll('+', '');
+    try {
+      // Try to parse with libphonenumber
+      final parsedNumber = PhoneNumber.parse(phoneNumber);
+      return parsedNumber.isValid();
+    } catch (e) {
+      // If parsing fails, fall back to custom pattern matching
+      final country = detectCountry(phoneNumber);
+      if (country == null) return false;
 
-    if (!cleanNumber.startsWith(dialCodeDigits)) return false;
+      // Extract the local part after the dial code
+      final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+      final dialCodeDigits = country.dialCode.replaceAll('+', '');
 
-    final localNumber = cleanNumber.substring(dialCodeDigits.length);
-    return country.validateLocal(localNumber);
+      if (!cleanNumber.startsWith(dialCodeDigits)) return false;
+
+      final localNumber = cleanNumber.substring(dialCodeDigits.length);
+      return country.validateLocal(localNumber);
+    }
   }
 
   /// Validates a local phone number for a specific country.
+  /// Uses Google's libphonenumber for robust validation.
   static bool validateLocal(String localNumber, CountryData country) {
-    return country.validateLocal(localNumber);
+    if (localNumber.isEmpty) return false;
+
+    try {
+      // Try to parse with libphonenumber using country context
+      final parsedNumber = PhoneNumber.parse(
+        localNumber,
+        callerCountry: IsoCode.fromJson(country.code),
+      );
+      return parsedNumber.isValid();
+    } catch (e) {
+      // If parsing fails, fall back to custom pattern matching
+      return country.validateLocal(localNumber);
+    }
   }
 
   /// Formats a phone number to international format (+XX XXX XXX XXXX).
-  /// This is a basic formatter - you may want to customize per country.
+  /// Uses Google's libphonenumber for proper country-specific formatting.
   static String formatInternational(String phoneNumber) {
-    final country = detectCountry(phoneNumber);
-    if (country == null) return phoneNumber;
+    if (phoneNumber.isEmpty) return phoneNumber;
 
-    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
-    return '+$cleanNumber';
+    try {
+      // Try to parse and format with libphonenumber
+      final parsedNumber = PhoneNumber.parse(phoneNumber);
+      return parsedNumber.international;
+    } catch (e) {
+      // If parsing fails, fall back to basic formatting
+      final country = detectCountry(phoneNumber);
+      if (country == null) return phoneNumber;
+
+      final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+      return '+$cleanNumber';
+    }
+  }
+
+  /// Formats a phone number to national format.
+  /// Uses Google's libphonenumber for proper country-specific formatting.
+  static String formatNational(String phoneNumber, {CountryData? country}) {
+    if (phoneNumber.isEmpty) return phoneNumber;
+
+    try {
+      // Try to parse and format with libphonenumber
+      final parsedNumber = country != null
+          ? PhoneNumber.parse(
+              phoneNumber,
+              callerCountry: IsoCode.fromJson(country.code),
+            )
+          : PhoneNumber.parse(phoneNumber);
+      return parsedNumber.formatNsn();
+    } catch (e) {
+      // If parsing fails, return the original number
+      return phoneNumber;
+    }
+  }
+
+  /// Formats a phone number as the user types (E.164 format).
+  /// Uses Google's libphonenumber for proper formatting.
+  static String formatAsYouType(String phoneNumber, {CountryData? country}) {
+    if (phoneNumber.isEmpty) return phoneNumber;
+
+    try {
+      // Try to parse and format with libphonenumber
+      final parsedNumber = country != null
+          ? PhoneNumber.parse(
+              phoneNumber,
+              callerCountry: IsoCode.fromJson(country.code),
+            )
+          : PhoneNumber.parse(phoneNumber);
+      return parsedNumber.international;
+    } catch (e) {
+      // If parsing fails during typing, return the original input
+      return phoneNumber;
+    }
   }
 
   /// Gets all countries that share the same dial code as the given country.
@@ -166,5 +260,47 @@ class PhoneValidator {
   static List<CountryData> getCountriesByDialCode(String dialCode) {
     final normalized = dialCode.startsWith('+') ? dialCode : '+$dialCode';
     return countries.where((c) => c.dialCode == normalized).toList();
+  }
+
+  /// Checks if a phone number is a valid mobile number.
+  /// Uses Google's libphonenumber for accurate validation.
+  static bool isMobileNumber(String phoneNumber) {
+    if (phoneNumber.isEmpty) return false;
+
+    try {
+      final parsedNumber = PhoneNumber.parse(phoneNumber);
+      return parsedNumber.isValid(type: PhoneNumberType.mobile);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Checks if a phone number is a valid fixed line number.
+  /// Uses Google's libphonenumber for accurate validation.
+  static bool isFixedLineNumber(String phoneNumber) {
+    if (phoneNumber.isEmpty) return false;
+
+    try {
+      final parsedNumber = PhoneNumber.parse(phoneNumber);
+      return parsedNumber.isValid(type: PhoneNumberType.fixedLine);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Validates a phone number for a specific type.
+  /// Uses Google's libphonenumber for accurate type-specific validation.
+  static bool validatePhoneNumberType(
+    String phoneNumber,
+    PhoneNumberType type,
+  ) {
+    if (phoneNumber.isEmpty) return false;
+
+    try {
+      final parsedNumber = PhoneNumber.parse(phoneNumber);
+      return parsedNumber.isValid(type: type);
+    } catch (e) {
+      return false;
+    }
   }
 }

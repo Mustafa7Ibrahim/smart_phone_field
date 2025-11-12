@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   equatable: ^2.0.5
+  phone_numbers_parser: ^9.0.16
 
 dev_dependencies:
   flutter_test:

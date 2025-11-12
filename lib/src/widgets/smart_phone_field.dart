@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../controllers/phone_field_controller.dart';
-import '../delegates/phone_field_delegate.dart';
-import '../delegates/default_phone_field_delegate.dart';
 import '../delegates/country_picker_delegate.dart';
 import '../delegates/default_country_picker_delegate.dart';
+import '../delegates/default_phone_field_delegate.dart';
+import '../delegates/phone_field_delegate.dart';
 import '../models/country_data.dart';
 import 'country_picker_sheet.dart';
 
@@ -80,6 +81,78 @@ class SmartPhoneField extends StatefulWidget {
   /// Whether to show the country selector button.
   final bool showCountrySelector;
 
+  /// Custom decoration for the input field.
+  /// This overrides the delegate's decoration.
+  final InputDecoration? decoration;
+
+  /// Custom style for the text.
+  final TextStyle? style;
+
+  /// Text align for the input.
+  final TextAlign textAlign;
+
+  /// Autofocus the field.
+  final bool autofocus;
+
+  /// Max length of the input.
+  final int? maxLength;
+
+  /// Max lines for the input (default is 1).
+  final int? maxLines;
+
+  /// Min lines for the input.
+  final int? minLines;
+
+  /// Obscure text (for password-like fields).
+  final bool obscureText;
+
+  /// Whether to show cursor.
+  final bool? showCursor;
+
+  /// Cursor color.
+  final Color? cursorColor;
+
+  /// Cursor width.
+  final double cursorWidth;
+
+  /// Cursor height.
+  final double? cursorHeight;
+
+  /// Custom widget to display instead of the default country selector.
+  /// If provided, this will be used instead of the delegate's buildCountrySelector.
+  final Widget Function(CountryData? country, VoidCallback onTap)?
+  countrySelectorBuilder;
+
+  /// Custom leading widget before the country selector.
+  final Widget? leading;
+
+  /// Custom trailing widget after the text field.
+  final Widget? trailing;
+
+  /// Padding around the entire widget.
+  final EdgeInsetsGeometry? padding;
+
+  /// Spacing between country selector and text field.
+  final double spacing;
+
+  /// Whether to show error text below the field.
+  final bool showErrorText;
+
+  /// Custom error text to display instead of the default validation error.
+  final String? errorText;
+
+  /// Text capitalization.
+  final TextCapitalization textCapitalization;
+
+  /// Callback when field is submitted.
+  final void Function(String)? onSubmitted;
+
+  /// Callback when field is tapped.
+  final VoidCallback? onTap;
+
+  /// Whether field is read-only.
+  final bool readOnly;
+
   /// Creates a smart phone field.
   const SmartPhoneField({
     super.key,
@@ -97,6 +170,29 @@ class SmartPhoneField extends StatefulWidget {
     this.focusNode,
     this.enabled = true,
     this.showCountrySelector = true,
+    this.decoration,
+    this.style,
+    this.textAlign = TextAlign.start,
+    this.autofocus = false,
+    this.maxLength,
+    this.maxLines = 1,
+    this.minLines,
+    this.obscureText = false,
+    this.showCursor,
+    this.cursorColor,
+    this.cursorWidth = 2.0,
+    this.cursorHeight,
+    this.countrySelectorBuilder,
+    this.leading,
+    this.trailing,
+    this.padding,
+    this.spacing = 8.0,
+    this.showErrorText = true,
+    this.errorText,
+    this.textCapitalization = TextCapitalization.none,
+    this.onSubmitted,
+    this.onTap,
+    this.readOnly = false,
   });
 
   @override
@@ -238,20 +334,33 @@ class _SmartPhoneFieldState extends State<SmartPhoneField> {
   Widget build(BuildContext context) {
     final delegate = _phoneFieldDelegate;
     final hasError = !_controller.isValid && _controller.phoneNumber.isNotEmpty;
+    final displayError = widget.showErrorText && hasError;
 
-    return Row(
+    Widget content = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Leading widget
+        if (widget.leading != null) ...[
+          widget.leading!,
+          SizedBox(width: widget.spacing),
+        ],
+
         // Country selector
         if (widget.showCountrySelector && delegate.showCountrySelector)
           Padding(
-            padding: const EdgeInsets.only(top: 8, right: 8),
-            child: delegate.buildCountrySelector(
-                  context,
-                  _controller.selectedCountry,
-                  _onCountrySelectorTapped,
-                ) ??
-                const SizedBox.shrink(),
+            padding: EdgeInsets.only(top: 8, right: widget.spacing),
+            child:
+                widget.countrySelectorBuilder != null
+                    ? widget.countrySelectorBuilder!(
+                      _controller.selectedCountry,
+                      _onCountrySelectorTapped,
+                    )
+                    : delegate.buildCountrySelector(
+                          context,
+                          _controller.selectedCountry,
+                          _onCountrySelectorTapped,
+                        ) ??
+                        const SizedBox.shrink(),
           ),
 
         // Phone number text field
@@ -263,13 +372,33 @@ class _SmartPhoneFieldState extends State<SmartPhoneField> {
             keyboardType: widget.keyboardType,
             textDirection: delegate.textDirection,
             inputFormatters: widget.inputFormatters,
-            decoration: delegate.buildInputDecoration(
-              context,
-              _controller.selectedCountry,
-              hasError,
-            ).copyWith(
-              errorText: hasError ? _controller.errorMessage : null,
-            ),
+            style: widget.style,
+            textAlign: widget.textAlign,
+            autofocus: widget.autofocus,
+            maxLength: widget.maxLength,
+            maxLines: widget.maxLines,
+            minLines: widget.minLines,
+            obscureText: widget.obscureText,
+            showCursor: widget.showCursor,
+            cursorColor: widget.cursorColor,
+            cursorWidth: widget.cursorWidth,
+            cursorHeight: widget.cursorHeight,
+            textCapitalization: widget.textCapitalization,
+            readOnly: widget.readOnly,
+            onSubmitted: widget.onSubmitted,
+            onTap: widget.onTap,
+            decoration: (widget.decoration ??
+                    delegate.buildInputDecoration(
+                      context,
+                      _controller.selectedCountry,
+                      hasError,
+                    ))
+                .copyWith(
+                  errorText:
+                      displayError
+                          ? (widget.errorText ?? _controller.errorMessage)
+                          : null,
+                ),
             onChanged: (value) {
               // Apply custom formatting if provided
               final formatted = delegate.formatPhoneNumber(
@@ -300,7 +429,20 @@ class _SmartPhoneFieldState extends State<SmartPhoneField> {
             },
           ),
         ),
+
+        // Trailing widget
+        if (widget.trailing != null) ...[
+          SizedBox(width: widget.spacing),
+          widget.trailing!,
+        ],
       ],
     );
+
+    // Wrap with padding if provided
+    if (widget.padding != null) {
+      content = Padding(padding: widget.padding!, child: content);
+    }
+
+    return content;
   }
 }

@@ -54,9 +54,25 @@ class _PhoneFieldDemoPageState extends State<PhoneFieldDemoPage> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Main Phone Field
+            // Title
+            Text(
+              'Basic Usage',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Default configuration with auto-detection',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 16),
+
+            // Basic Phone Field
             SmartPhoneField(
               controller: _controller,
               onCountryChanged: (country) {
@@ -64,7 +80,112 @@ class _PhoneFieldDemoPageState extends State<PhoneFieldDemoPage> {
               },
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
+
+            // Custom Styling Example
+            Text(
+              'Custom Styling',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Rounded borders, filled background, custom colors',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 16),
+
+            SmartPhoneField(
+              phoneFieldDelegate: DefaultPhoneFieldDelegate(
+                labelText: 'Mobile Number',
+                hintText: 'Enter your mobile',
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: 16,
+                focusedBorderColor: Colors.purple,
+                enabledBorderColor: Colors.purple.withValues(alpha: 0.3),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // With Icons
+            Text(
+              'With Icons & Helper Text',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
+
+            SmartPhoneField(
+              phoneFieldDelegate: DefaultPhoneFieldDelegate(
+                labelText: 'Phone',
+                prefixIcon: const Icon(Icons.phone_outlined),
+                suffixIcon: const Icon(Icons.contact_phone),
+                helperText: 'We\'ll never share your number',
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Minimal Style
+            Text(
+              'Minimal Style',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
+
+            SmartPhoneField(
+              phoneFieldDelegate: DefaultPhoneFieldDelegate(
+                hintText: 'Phone number',
+                showDialCode: false,
+                showDropdownIcon: false,
+                borderRadius: 12,
+                borderWidth: 1.5,
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // With Leading/Trailing
+            Text(
+              'With Custom Widgets',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
+
+            SmartPhoneField(
+              leading: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.call,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.qr_code_scanner),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Scan QR code')),
+                  );
+                },
+              ),
+              spacing: 12,
+            ),
+
+            const SizedBox(height: 32),
 
             // Status Card
             if (_selectedCountry != null) ...[
@@ -92,12 +213,14 @@ class _PhoneFieldDemoPageState extends State<PhoneFieldDemoPage> {
                                 ),
                                 Text(
                                   _selectedCountry!.dialCode,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                      ),
                                 ),
                               ],
                             ),
@@ -115,7 +238,9 @@ class _PhoneFieldDemoPageState extends State<PhoneFieldDemoPage> {
                         const SizedBox(height: 4),
                         Text(
                           _controller.fullPhoneNumber,
-                          style: Theme.of(context).textTheme.titleMedium
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -131,17 +256,16 @@ class _PhoneFieldDemoPageState extends State<PhoneFieldDemoPage> {
               children: [
                 Expanded(
                   child: FilledButton(
-                    onPressed:
-                        _controller.phoneNumber.isEmpty
-                            ? null
-                            : () {
-                              _controller.validate();
-                              if (_controller.isValid) {
-                                _showSuccessDialog();
-                              } else {
-                                _showErrorDialog();
-                              }
-                            },
+                    onPressed: _controller.phoneNumber.isEmpty
+                        ? null
+                        : () {
+                            _controller.validate();
+                            if (_controller.isValid) {
+                              _showSuccessDialog();
+                            } else {
+                              _showErrorDialog();
+                            }
+                          },
                     child: const Text('Validate'),
                   ),
                 ),
@@ -160,18 +284,40 @@ class _PhoneFieldDemoPageState extends State<PhoneFieldDemoPage> {
 
             const SizedBox(height: 40),
 
-            // Features Section
-            Text(
-              'Features',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            // Customization Info
+            Card(
+              color:
+                  Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.palette,
+                            color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Customization Options',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildFeature('40+ styling parameters'),
+                    _buildFeature('Custom delegates'),
+                    _buildFeature('Custom widgets (leading/trailing)'),
+                    _buildFeature('Full TextField properties'),
+                    _buildFeature('Border, colors, padding control'),
+                    _buildFeature('Flag size & selector customization'),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 16),
-            _buildFeature('195 countries supported'),
-            _buildFeature('Auto country detection'),
-            _buildFeature('Phone number validation'),
-            _buildFeature('Customizable styling'),
           ],
         ),
       ),
